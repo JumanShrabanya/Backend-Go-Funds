@@ -30,8 +30,7 @@ export class UsersService {
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    const count = await this.userRepository.count({ where: { email } });
-    return count > 0;
+    return this.userRepository.existsBy({ email });
   }
 
   async createUser(params: {
@@ -77,10 +76,7 @@ export class UsersService {
     );
   }
 
-  /**
-   * Validates a raw refresh token string against a stored RefreshToken record.
-   * Returns the record if valid, null otherwise.
-   */
+  
   async validateRefreshToken(
     tokenId: string,
     rawToken: string,

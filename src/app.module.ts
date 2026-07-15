@@ -23,13 +23,15 @@ import { RefreshToken } from './modules/users/entities/refresh-token.entity';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('app.database.host'),
-        port: configService.get<number>('app.database.port'),
-        username: configService.get<string>('app.database.username'),
-        password: configService.get<string>('app.database.password'),
-        database: configService.get<string>('app.database.name'),
+        url: configService.get<string>('app.database.url'),
+        ssl: true,
+        extra: {
+          ssl: {
+            rejectUnauthorized: false,
+          },
+        },
         entities: [User, RefreshToken],
-        // NOTE: Set synchronize: false and use TypeORM migrations in production.
+
         synchronize: true,
         logging: process.env.NODE_ENV === 'development',
       }),
@@ -42,4 +44,4 @@ import { RefreshToken } from './modules/users/entities/refresh-token.entity';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
