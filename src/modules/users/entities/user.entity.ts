@@ -36,6 +36,9 @@ export class User {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ name: 'is_verified', default: false })
+  isVerified: boolean;
+
   @Column({ name: 'phone_country_code', type: 'varchar', length: 10, nullable: true })
   phoneCountryCode: string | null;
 
