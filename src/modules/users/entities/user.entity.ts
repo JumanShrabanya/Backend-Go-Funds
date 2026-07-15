@@ -36,10 +36,10 @@ export class User {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @Column({ name: 'phone_country_code', length: 10, nullable: true })
+  @Column({ name: 'phone_country_code', type: 'varchar', length: 10, nullable: true })
   phoneCountryCode: string | null;
 
-  @Column({ name: 'phone_number', length: 20, nullable: true })
+  @Column({ name: 'phone_number', type: 'varchar', length: 20, nullable: true })
   phoneNumber: string | null;
 
   @Column({ name: 'date_of_birth', type: 'date', nullable: true })
@@ -54,7 +54,7 @@ export class User {
   })
   annualIncome: number | null;
 
-  @OneToMany(() => RefreshToken, (token) => token.user, { cascade: true })
+  @OneToMany(() => RefreshToken, (token: RefreshToken) => token.user, { cascade: true })
   refreshTokens: RefreshToken[];
 
   @CreateDateColumn({ name: 'created_at' })
