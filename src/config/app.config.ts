@@ -14,10 +14,8 @@ export const appConfig = registerAs('app', () => {
 
   database: {
     // DATABASE_URL remains a backward-compatible fallback for existing Neon setups.
-    url: isProduction
-      ? (process.env.NEON_DATABASE_URL ?? process.env.DATABASE_URL ?? 'localhost')
-      : (process.env.LOCAL_DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5434/gofunds'),
-    ssl: isProduction,
+    url: process.env.DATABASE_URL ?? process.env.LOCAL_DATABASE_URL ?? 'localhost',
+    ssl: true,
     synchronize: !isProduction,
   },
 

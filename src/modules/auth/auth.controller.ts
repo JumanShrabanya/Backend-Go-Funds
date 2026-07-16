@@ -4,6 +4,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterRequestDto } from './dto/request/register.request.dto';
@@ -12,6 +13,9 @@ import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
 import { MessageResponseDto } from './dto/response/message.response.dto';
 import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
 import { ResendOtpRequestDto } from './dto/request/resend-otp.request.dto';
+import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 import { ApiTags } from '@nestjs/swagger';
 
@@ -50,5 +54,19 @@ export class AuthController {
     @Body() dto: ResendOtpRequestDto,
   ): Promise<MessageResponseDto> {
     return this.authService.resendVerificationOtp(dto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtRefreshGuard)
+  async refresh(@CurrentUser() user: User): Promise<AuthTokensResponseDto> {
+    return this.authService.refresh(user);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtRefreshGuard)
+  async logout(@CurrentUser() user: User): Promise<MessageResponseDto> {
+    return this.authService.logout(user);
   }
 }

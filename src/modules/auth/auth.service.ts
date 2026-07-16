@@ -131,6 +131,16 @@ export class AuthService {
     return { message: 'Verification code sent to your email address.' };
   }
 
+  async refresh(user: User): Promise<AuthTokensResponseDto> {
+    await this.usersService.revokeAllRefreshTokensForUser(user.id);
+    return this.generateAuthResponse(user);
+  }
+
+  async logout(user: User): Promise<MessageResponseDto> {
+    await this.usersService.revokeAllRefreshTokensForUser(user.id);
+    return { message: 'You have been signed out successfully.' };
+  }
+
   private async createAndSendVerificationOtp(user: User): Promise<void> {
     const otp = this.generateOtp();
     const saltRounds = this.configService.get<number>('app.bcrypt.saltRounds')!;
