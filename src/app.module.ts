@@ -7,9 +7,12 @@ import { AppService } from './app.service';
 import { appConfig } from './config/app.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { FundsModule } from './modules/funds/funds.module';
 import { User } from './modules/users/entities/user.entity';
 import { RefreshToken } from './modules/users/entities/refresh-token.entity';
 import { OtpVerification } from './modules/users/entities/otp-verification.entity';
+import { FundHouse } from './modules/funds/entities/fund-house.entity';
+import { Fund } from './modules/funds/entities/fund.entity';
 
 @Module({
   imports: [
@@ -33,11 +36,11 @@ import { OtpVerification } from './modules/users/entities/otp-verification.entit
           extra: sslEnabled
             ? { ssl: { rejectUnauthorized: false } }
             : undefined,
-        entities: [User, RefreshToken, OtpVerification],
+          entities: [User, RefreshToken, OtpVerification, FundHouse, Fund],
 
-        // Never mutate a production schema automatically; use migrations there.
-        synchronize: configService.get<boolean>('app.database.synchronize'),
-        logging: process.env.NODE_ENV === 'development',
+          // Never mutate a production schema automatically; use migrations there.
+          synchronize: configService.get<boolean>('app.database.synchronize'),
+          logging: process.env.NODE_ENV === 'development',
         };
       },
     }),
@@ -46,8 +49,10 @@ import { OtpVerification } from './modules/users/entities/otp-verification.entit
     ScheduleModule.forRoot(),
     UsersModule,
     AuthModule,
+    FundsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }
+
