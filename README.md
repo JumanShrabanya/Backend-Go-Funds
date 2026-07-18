@@ -31,6 +31,22 @@
 $ npm install
 ```
 
+## Local development database
+
+Use the included Docker PostgreSQL service for day-to-day development. It is isolated from Neon and stores data in a Docker volume.
+
+```bash
+# Start PostgreSQL (available at localhost:5434)
+npm run db:up
+
+# Start the API; TypeORM creates/synchronizes the development schema
+npm run start:dev
+```
+
+Set `APP_ENV=development` in `.env` to use `LOCAL_DATABASE_URL`. The default local database is `gofunds` with username/password `postgres` and does not use SSL. To reset all local data, run `docker compose --env-file .compose.env down -v` and then `npm run db:up`.
+
+For Neon, set `APP_ENV=production` and set `NEON_DATABASE_URL` to the Neon connection string in `.env`. SSL is enabled and automatic schema synchronization is disabled when this flag is set, so apply database migrations as part of deployment.
+
 ## Compile and run the project
 
 ```bash

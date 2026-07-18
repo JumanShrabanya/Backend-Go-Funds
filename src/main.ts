@@ -1,4 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -35,7 +36,17 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  const port = process.env.PORT ?? 3000;
+  // ── Swagger API Documentation ───────────────────────────────────────────────
+  const config = new DocumentBuilder()
+    .setTitle('Go Funds API')
+    .setDescription('The Mutual Fund Investment Plan Generator API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, documentFactory);
+
+  const port = process.env.PORT ?? 8000;
   await app.listen(port);
   console.log(`🚀 Application is running on: http://localhost:${port}/api/v1`);
 }

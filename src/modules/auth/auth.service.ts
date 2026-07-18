@@ -1,8 +1,14 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { RegisterRequestDto } from './dto/request/register.request.dto';
@@ -10,6 +16,10 @@ import { LoginRequestDto } from './dto/request/login.request.dto';
 import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
 import { UserResponseDto } from '../users/dto/response/user.response.dto';
 import { User } from '../users/entities/user.entity';
+import { MessageResponseDto } from './dto/response/message.response.dto';
+import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
+import { ResendOtpRequestDto } from './dto/request/resend-otp.request.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -17,25 +27,40 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   // ── Registration ──────────────────────────────────────────────────────────
 
-  async register(dto: RegisterRequestDto): Promise<AuthTokensResponseDto> {
+  async register(dto: RegisterRequestDto): Promise<MessageResponseDto> {
     const saltRounds = this.configService.get<number>(
       'app.bcrypt.saltRounds',
     )!;
 
     const passwordHash = await bcrypt.hash(dto.password, saltRounds);
 
-    const user = await this.usersService.createUser({
-      email: dto.email.toLowerCase().trim(),
-      passwordHash,
-      firstName: dto.firstName.trim(),
-      lastName: dto.lastName.trim(),
-    });
+    const email = dto.email.toLowerCase().trim();
+    const existingUser = await this.usersService.findByEmail(email);
 
-    return this.generateAuthResponse(user);
+    if (existingUser?.isVerified) {
+      throw new ConflictException('An account with this email already exists.');
+    }
+
+    const user = existingUser
+      ? await this.usersService.updateUnverifiedUser(existingUser, {
+          passwordHash,
+          firstName: dto.firstName.trim(),
+          lastName: dto.lastName.trim(),
+        })
+      : await this.usersService.createUser({
+          email,
+          passwordHash,
+          firstName: dto.firstName.trim(),
+          lastName: dto.lastName.trim(),
+        });
+
+    await this.createAndSendVerificationOtp(user);
+    return { message: 'Verification code sent to your email address.' };
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -58,7 +83,81 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been deactivated.');
     }
 
+    if (!user.isVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in.',
+      );
+    }
+
     return this.generateAuthResponse(user);
+  }
+
+  async verifyEmail(dto: VerifyEmailRequestDto): Promise<AuthTokensResponseDto> {
+    const user = await this.usersService.findByEmail(dto.email.toLowerCase().trim());
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification code.');
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestException('This email address is already verified.');
+    }
+
+    const verification = await this.usersService.findActiveVerificationOtp(user.id);
+    if (!verification || verification.expiresAt <= new Date()) {
+      throw new BadRequestException('Invalid or expired verification code.');
+    }
+
+    const isOtpValid = await bcrypt.compare(dto.otp, verification.otpHash);
+    if (!isOtpValid || !(await this.usersService.consumeVerificationOtp(verification.id))) {
+      throw new BadRequestException('Invalid or expired verification code.');
+    }
+
+    await this.usersService.markEmailVerified(user.id);
+    user.isVerified = true;
+    return this.generateAuthResponse(user);
+  }
+
+  async resendVerificationOtp(dto: ResendOtpRequestDto): Promise<MessageResponseDto> {
+    const user = await this.usersService.findByEmail(dto.email.toLowerCase().trim());
+    if (!user) {
+      throw new BadRequestException('No account exists for this email address.');
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestException('This email address is already verified.');
+    }
+
+    await this.createAndSendVerificationOtp(user);
+    return { message: 'Verification code sent to your email address.' };
+  }
+
+  async refresh(user: User): Promise<AuthTokensResponseDto> {
+    await this.usersService.revokeAllRefreshTokensForUser(user.id);
+    return this.generateAuthResponse(user);
+  }
+
+  async logout(user: User): Promise<MessageResponseDto> {
+    await this.usersService.revokeAllRefreshTokensForUser(user.id);
+    return { message: 'You have been signed out successfully.' };
+  }
+
+  private async createAndSendVerificationOtp(user: User): Promise<void> {
+    const otp = this.generateOtp();
+    const saltRounds = this.configService.get<number>('app.bcrypt.saltRounds')!;
+    const otpHash = await bcrypt.hash(otp, saltRounds);
+    const expiresInMinutes = this.configService.get<number>('app.otp.expiresInMinutes')!;
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+    await this.usersService.replaceVerificationOtp({
+      userId: user.id,
+      otpHash,
+      expiresAt,
+    });
+    await this.mailService.sendVerificationEmail(user.email, otp, expiresInMinutes);
+  }
+
+  private generateOtp(): string {
+    return randomInt(100000, 1000000).toString();
   }
 
   // ── Token generation ──────────────────────────────────────────────────────

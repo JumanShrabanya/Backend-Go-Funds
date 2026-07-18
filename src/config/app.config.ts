@@ -4,15 +4,19 @@ import { registerAs } from '@nestjs/config';
  * Typed configuration factory for all environment variables.
  * Access via ConfigService: configService.get('app').jwtSecret
  */
-export const appConfig = registerAs('app', () => ({
-  port: parseInt(process.env.PORT ?? '3000', 10),
+export const appConfig = registerAs('app', () => {
+  const environment = process.env.APP_ENV ?? 'development';
+  const isProduction = environment === 'production';
+
+  return {
+  environment,
+  port: parseInt(process.env.PORT ?? '8000', 10),
 
   database: {
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'postgres',
-    password: process.env.DB_PASSWORD ?? '',
-    name: process.env.DB_NAME ?? 'go_funds',
+    // DATABASE_URL remains a backward-compatible fallback for existing Neon setups.
+    url: process.env.DATABASE_URL ?? process.env.LOCAL_DATABASE_URL ?? 'localhost',
+    ssl: true,
+    synchronize: !isProduction,
   },
 
   jwt: {
@@ -25,6 +29,20 @@ export const appConfig = registerAs('app', () => ({
   bcrypt: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS ?? '10', 10),
   },
-}));
+
+  mail: {
+    host: 'smtp.gmail.com',
+    port: 465,
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM ?? '',
+  },
+
+  otp: {
+    // OTP expires in 15 minutes
+    expiresInMinutes: parseInt(process.env.OTP_EXPIRES_IN_MINUTES ?? '15', 10),
+  },
+  };
+});
 
 export type AppConfig = ReturnType<typeof appConfig>;

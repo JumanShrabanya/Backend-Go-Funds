@@ -22,7 +22,7 @@ export class RegisterRequestDto {
    */
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long.' })
-  @MaxLength(64, { message: 'Password must not exceed 64 characters.' })
+  @MaxLength(20, { message: 'Password must not exceed 20 characters.' })
   @Matches(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/,
     {
@@ -34,11 +34,11 @@ export class RegisterRequestDto {
 
   @IsString()
   @IsNotEmpty({ message: 'First name is required.' })
-  @MaxLength(100, { message: 'First name must not exceed 100 characters.' })
+  @MaxLength(30, { message: 'First name must not exceed 30 characters.' })
   firstName: string;
 
   @IsString()
   @IsNotEmpty({ message: 'Last name is required.' })
-  @MaxLength(100, { message: 'Last name must not exceed 100 characters.' })
+  @MaxLength(30, { message: 'Last name must not exceed 30 characters.' })
   lastName: string;
 }

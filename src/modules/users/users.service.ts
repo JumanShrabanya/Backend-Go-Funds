@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { OtpVerification } from './entities/otp-verification.entity';
 
 @Injectable()
 export class UsersService {
@@ -13,6 +14,9 @@ export class UsersService {
 
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+
+    @InjectRepository(OtpVerification)
+    private readonly otpVerificationRepository: Repository<OtpVerification>,
   ) {}
 
   // ── User methods ──────────────────────────────────────────────────────────
@@ -30,8 +34,7 @@ export class UsersService {
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    const count = await this.userRepository.count({ where: { email } });
-    return count > 0;
+    return this.userRepository.existsBy({ email });
   }
 
   async createUser(params: {
@@ -46,6 +49,64 @@ export class UsersService {
 
     const user = this.userRepository.create(params);
     return this.userRepository.save(user);
+  }
+
+  async updateUnverifiedUser(
+    user: User,
+    params: {
+      passwordHash: string;
+      firstName: string;
+      lastName: string;
+    },
+  ): Promise<User> {
+    user.passwordHash = params.passwordHash;
+    user.firstName = params.firstName;
+    user.lastName = params.lastName;
+    user.isActive = true;
+    return this.userRepository.save(user);
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await this.userRepository.update(userId, { isVerified: true });
+  }
+
+  async deleteExpiredUnverifiedUsers(before: Date): Promise<number> {
+    const result = await this.userRepository.delete({
+      isVerified: false,
+      createdAt: LessThan(before),
+    });
+    return result.affected ?? 0;
+  }
+
+  // -- Email OTP methods ---------------------------------------------------
+
+  async replaceVerificationOtp(params: {
+    userId: string;
+    otpHash: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    await this.otpVerificationRepository.delete({ userId: params.userId });
+    await this.otpVerificationRepository.save(
+      this.otpVerificationRepository.create(params),
+    );
+  }
+
+  async findActiveVerificationOtp(userId: string): Promise<OtpVerification | null> {
+    return this.otpVerificationRepository.findOne({
+      where: {
+        userId,
+        isUsed: false,
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async consumeVerificationOtp(id: string): Promise<boolean> {
+    const result = await this.otpVerificationRepository.update(
+      { id, isUsed: false },
+      { isUsed: true },
+    );
+    return (result.affected ?? 0) === 1;
   }
 
   // ── Refresh token methods ─────────────────────────────────────────────────
@@ -77,10 +138,7 @@ export class UsersService {
     );
   }
 
-  /**
-   * Validates a raw refresh token string against a stored RefreshToken record.
-   * Returns the record if valid, null otherwise.
-   */
+  
   async validateRefreshToken(
     tokenId: string,
     rawToken: string,
