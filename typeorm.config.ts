@@ -5,6 +5,7 @@ import { RefreshToken } from './src/modules/users/entities/refresh-token.entity'
 import { OtpVerification } from './src/modules/users/entities/otp-verification.entity';
 import { FundHouse } from './src/modules/funds/entities/fund-house.entity';
 import { Fund } from './src/modules/funds/entities/fund.entity';
+import { InvestmentPlan } from './src/modules/planner/entities/investment-plan.entity';
 
 config(); 
 
@@ -15,7 +16,7 @@ export default new DataSource({
   url: process.env.DATABASE_URL || process.env.LOCAL_DATABASE_URL || 'localhost',
   ssl: isSslEnabled ? { rejectUnauthorized: false } : false,
   extra: isSslEnabled ? { ssl: { rejectUnauthorized: false } } : undefined,
-  entities: [User, RefreshToken, OtpVerification, FundHouse, Fund],
+  entities: [User, RefreshToken, OtpVerification, FundHouse, Fund, InvestmentPlan],
   migrations: ['./src/migrations/*.ts'],
   synchronize: false,
 });
