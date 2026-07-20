@@ -13,6 +13,8 @@ import { RefreshToken } from './modules/users/entities/refresh-token.entity';
 import { OtpVerification } from './modules/users/entities/otp-verification.entity';
 import { FundHouse } from './modules/funds/entities/fund-house.entity';
 import { Fund } from './modules/funds/entities/fund.entity';
+import { PlannerModule } from './modules/planner/planner.module';
+import { InvestmentPlan } from './modules/planner/entities/investment-plan.entity';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { Fund } from './modules/funds/entities/fund.entity';
           extra: sslEnabled
             ? { ssl: { rejectUnauthorized: false } }
             : undefined,
-          entities: [User, RefreshToken, OtpVerification, FundHouse, Fund],
+          entities: [User, RefreshToken, OtpVerification, FundHouse, Fund, InvestmentPlan],
 
           // Never mutate a production schema automatically; use migrations there.
           synchronize: configService.get<boolean>('app.database.synchronize'),
@@ -50,6 +52,7 @@ import { Fund } from './modules/funds/entities/fund.entity';
     UsersModule,
     AuthModule,
     FundsModule,
+    PlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

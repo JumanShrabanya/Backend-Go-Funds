@@ -104,6 +104,12 @@ export class Fund {
   @Column({ name: 'launch_date', type: 'date', nullable: true })
   launchDate: Date | null;
 
+  @Column({ name: 'sip_allowed', type: 'boolean', default: true })
+  sipAllowed: boolean;
+
+  @Column({ name: 'lump_sum_allowed', type: 'boolean', default: true })
+  lumpSumAllowed: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

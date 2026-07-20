@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { UserRole } from '../../../common/enums/user-role.enum';
 import { RefreshToken } from './refresh-token.entity';
+import { InvestmentPlan } from '../../planner/entities/investment-plan.entity';
 
 @Entity({ name: 'users' })
 export class User {
@@ -59,6 +60,9 @@ export class User {
 
   @OneToMany(() => RefreshToken, (token: RefreshToken) => token.user, { cascade: true })
   refreshTokens: RefreshToken[];
+
+  @OneToMany(() => InvestmentPlan, (plan: InvestmentPlan) => plan.user, { cascade: true })
+  investmentPlans: InvestmentPlan[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
