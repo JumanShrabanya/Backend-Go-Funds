@@ -45,7 +45,7 @@ export class AssetAllocationService {
     if (debtPct > 0) {
       // For debt, we'll suggest a dynamic bond fund or corporate bond for diversification
       schemas.push({
-        subCategory: FundSubCategory.CORPORATE_BOND,
+        subCategory: FundSubCategory.LIQUID,
         percentage: debtPct,
         targetRisk: FundRiskLevel.MODERATE
       });

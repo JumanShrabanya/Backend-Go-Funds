@@ -15,6 +15,7 @@ export class PlannerController {
   async generatePlan(@Req() req: Request & { user: User }, @Body() createPlanDto: CreatePlanDto) {
     const userId = req.user.id;
     const plan = await this.recommendationService.generateRecommendation(userId, createPlanDto);
+    console.log('[PlannerController] Returning plan:', JSON.stringify(plan));
     return {
       message: 'Investment plan generated successfully',
       data: plan,

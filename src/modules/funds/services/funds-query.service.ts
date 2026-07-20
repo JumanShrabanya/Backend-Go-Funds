@@ -96,7 +96,7 @@ export class FundsQueryService {
     const queryBuilder = this.fundRepository.createQueryBuilder('fund');
 
     queryBuilder.andWhere('fund.fundSubCategory = :subCategory', { subCategory });
-    queryBuilder.andWhere('fund.fundRisk = :risk', { risk });
+  
 
     if (mode === InvestmentMode.SIP) {
       queryBuilder.andWhere('fund.sipAllowed = :sipAllowed', { sipAllowed: true });

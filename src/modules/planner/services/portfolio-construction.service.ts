@@ -16,7 +16,7 @@ export class PortfolioConstructionService {
       }
 
       // Find the best fund that hasn't been used yet (to strictly avoid duplicates if categories overlap somehow)
-      let selectedFund = null;
+      let selectedFund: typeof group.eligibleFunds[0] | null = null;
       for (const fund of group.eligibleFunds) {
         if (!usedFundIds.has(fund.id)) {
           selectedFund = fund;

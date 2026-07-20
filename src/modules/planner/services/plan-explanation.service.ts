@@ -3,6 +3,7 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { RiskProfile } from '../planner.enums';
 import { GoalStrategy } from './goal-analysis.service';
 import { FundAllocation } from '../interfaces/engine.interfaces';
+import { FundSubCategory } from '../../funds/funds.enums';
 
 @Injectable()
 export class PlanExplanationService {
@@ -28,7 +29,7 @@ export class PlanExplanationService {
       );
     }
 
-    if (allocations.some(a => a.fund.fundSubCategory === 'small_cap_fund' || a.fund.fundSubCategory === 'mid_cap_fund')) {
+    if (allocations.some(a => a.fund.fundSubCategory === FundSubCategory.SMALL_CAP || a.fund.fundSubCategory === FundSubCategory.MID_CAP)) {
       explanations.push(
         `We included Mid and/or Small Cap funds to potentially beat inflation significantly over your extended horizon.`
       );

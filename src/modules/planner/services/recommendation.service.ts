@@ -89,7 +89,11 @@ export class RecommendationService {
     });
 
     try {
-      return await this.planRepository.save(newPlan);
+      const saved = await this.planRepository.save(newPlan);
+      // Manually assign allocationsJson back — TypeORM's save() does not always
+      // populate jsonb columns in the returned entity object.
+      saved.allocations = allocationsJson;
+      return saved;
     } catch (error) {
       throw new InternalServerErrorException('Failed to save the investment plan.');
     }
