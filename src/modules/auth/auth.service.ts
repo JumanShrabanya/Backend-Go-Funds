@@ -8,7 +8,7 @@ import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { plainToInstance } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from '../users/users.service';
 import { RegisterRequestDto } from './dto/request/register.request.dto';
@@ -37,7 +37,18 @@ export class AuthService {
       'app.bcrypt.saltRounds',
     )!;
 
-    const passwordHash = await bcrypt.hash(dto.password, saltRounds);
+    const plainPassword = this.decryptPassword(dto.password);
+    
+    // Manual validation of decrypted password
+    if (plainPassword.length < 8 || plainPassword.length > 20) {
+      throw new BadRequestException('Password must be between 8 and 20 characters long.');
+    }
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/;
+    if (!passRegex.test(plainPassword)) {
+      throw new BadRequestException('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+    }
+
+    const passwordHash = await bcrypt.hash(plainPassword, saltRounds);
 
     const email = dto.email.toLowerCase().trim();
     const existingUser = await this.usersService.findByEmail(email);
@@ -74,7 +85,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    const plainPassword = this.decryptPassword(dto.password);
+    const isPasswordValid = await bcrypt.compare(plainPassword, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid email or password.');
     }
@@ -157,7 +169,29 @@ export class AuthService {
   }
 
   private generateOtp(): string {
-    return randomInt(100000, 1000000).toString();
+    return crypto.randomInt(100000, 1000000).toString();
+  }
+
+  private decryptPassword(encryptedBase64: string): string {
+    const privateKey = process.env.RSA_PRIVATE_KEY;
+    if (!privateKey) {
+      throw new Error('RSA_PRIVATE_KEY is not configured in the environment');
+    }
+    try {
+      const buffer = Buffer.from(encryptedBase64, 'base64');
+      const decrypted = crypto.privateDecrypt(
+        {
+          key: privateKey.replace(/\\n/g, '\n'), // handle newlines if escaped in .env
+          padding: crypto.constants.RSA_PKCS1_PADDING,
+        },
+        buffer
+      );
+      const decryptedStr = decrypted.toString('utf8');
+      console.log(`[DEBUG] Decrypted password length: ${decryptedStr.length}`);
+      return decryptedStr;
+    } catch (err) {
+      throw new BadRequestException('Invalid password encryption.');
+    }
   }
 
   // ── Token generation ──────────────────────────────────────────────────────
