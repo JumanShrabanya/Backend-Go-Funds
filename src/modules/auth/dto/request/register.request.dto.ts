@@ -12,24 +12,8 @@ export class RegisterRequestDto {
   @IsNotEmpty()
   email: string;
 
-  /**
-   * Password rules:
-   * - At least 8 characters
-   * - At least one uppercase letter
-   * - At least one lowercase letter
-   * - At least one digit
-   * - At least one special character
-   */
   @IsString()
-  @MinLength(8, { message: 'Password must be at least 8 characters long.' })
-  @MaxLength(20, { message: 'Password must not exceed 20 characters.' })
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/,
-    {
-      message:
-        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
-    },
-  )
+  @IsNotEmpty({ message: 'Password is required.' })
   password: string;
 
   @IsString()
