@@ -70,6 +70,10 @@ export class UsersService {
     await this.userRepository.update(userId, { isVerified: true });
   }
 
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await this.userRepository.update(userId, { passwordHash });
+  }
+
   async deleteExpiredUnverifiedUsers(before: Date): Promise<number> {
     const result = await this.userRepository.delete({
       isVerified: false,
