@@ -13,6 +13,9 @@ import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
 import { MessageResponseDto } from './dto/response/message.response.dto';
 import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
 import { ResendOtpRequestDto } from './dto/request/resend-otp.request.dto';
+import { ForgotPasswordRequestDto } from './dto/request/forgot-password.request.dto';
+import { VerifyResetOtpRequestDto } from './dto/request/verify-reset-otp.request.dto';
+import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dto';
 import { JwtRefreshGuard } from '../../common/guards/jwt-refresh.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -68,5 +71,23 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   async logout(@CurrentUser() user: User): Promise<MessageResponseDto> {
     return this.authService.logout(user);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: ForgotPasswordRequestDto): Promise<MessageResponseDto> {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('verify-reset-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyResetOtp(@Body() dto: VerifyResetOtpRequestDto): Promise<{ resetToken: string }> {
+    return this.authService.verifyResetOtp(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordRequestDto): Promise<MessageResponseDto> {
+    return this.authService.resetPassword(dto);
   }
 }

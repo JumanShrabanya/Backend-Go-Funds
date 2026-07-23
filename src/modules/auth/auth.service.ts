@@ -19,6 +19,9 @@ import { User } from '../users/entities/user.entity';
 import { MessageResponseDto } from './dto/response/message.response.dto';
 import { VerifyEmailRequestDto } from './dto/request/verify-email.request.dto';
 import { ResendOtpRequestDto } from './dto/request/resend-otp.request.dto';
+import { ForgotPasswordRequestDto } from './dto/request/forgot-password.request.dto';
+import { VerifyResetOtpRequestDto } from './dto/request/verify-reset-otp.request.dto';
+import { ResetPasswordRequestDto } from './dto/request/reset-password.request.dto';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
@@ -151,6 +154,96 @@ export class AuthService {
   async logout(user: User): Promise<MessageResponseDto> {
     await this.usersService.revokeAllRefreshTokensForUser(user.id);
     return { message: 'You have been signed out successfully.' };
+  }
+
+  // ── Password Reset ────────────────────────────────────────────────────────
+
+  async forgotPassword(dto: ForgotPasswordRequestDto): Promise<MessageResponseDto> {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(email);
+    // Always return the same message to prevent user enumeration
+    if (!user || !user.isVerified || !user.isActive) {
+      return { message: 'If an account exists for this email, a reset code has been sent.' };
+    }
+
+    const otp = this.generateOtp();
+    const saltRounds = this.configService.get<number>('app.bcrypt.saltRounds')!;
+    const otpHash = await bcrypt.hash(otp, saltRounds);
+    const expiresInMinutes = this.configService.get<number>('app.otp.expiresInMinutes')!;
+    const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
+
+    await this.usersService.replaceVerificationOtp({ userId: user.id, otpHash, expiresAt });
+    await this.mailService.sendPasswordResetEmail(email, otp, expiresInMinutes);
+
+    return { message: 'If an account exists for this email, a reset code has been sent.' };
+  }
+
+  async verifyResetOtp(dto: VerifyResetOtpRequestDto): Promise<{ resetToken: string }> {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset code.');
+    }
+
+    const verification = await this.usersService.findActiveVerificationOtp(user.id);
+    if (!verification || verification.expiresAt <= new Date()) {
+      throw new BadRequestException('Invalid or expired reset code.');
+    }
+
+    const isOtpValid = await bcrypt.compare(dto.otp, verification.otpHash);
+    if (!isOtpValid || !(await this.usersService.consumeVerificationOtp(verification.id))) {
+      throw new BadRequestException('Invalid or expired reset code.');
+    }
+
+    // Issue a short-lived reset token (10 minutes)
+    const resetToken = this.jwtService.sign(
+      { sub: user.id, purpose: 'password_reset' },
+      {
+        secret: this.configService.get<string>('app.jwt.accessSecret'),
+        expiresIn: '10m',
+      },
+    );
+
+    return { resetToken };
+  }
+
+  async resetPassword(dto: ResetPasswordRequestDto): Promise<MessageResponseDto> {
+    // Verify the reset token
+    let payload: { sub: string; purpose: string };
+    try {
+      payload = this.jwtService.verify(dto.resetToken, {
+        secret: this.configService.get<string>('app.jwt.accessSecret'),
+      });
+    } catch {
+      throw new BadRequestException('Reset session has expired. Please start the process again.');
+    }
+
+    if (payload.purpose !== 'password_reset') {
+      throw new BadRequestException('Invalid reset token.');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+
+    // Decrypt and validate the new password
+    const plainPassword = this.decryptPassword(dto.password);
+    if (plainPassword.length < 8 || plainPassword.length > 20) {
+      throw new BadRequestException('Password must be between 8 and 20 characters long.');
+    }
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d@$!%*?&^#]{8,}$/;
+    if (!passRegex.test(plainPassword)) {
+      throw new BadRequestException(
+        'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+      );
+    }
+
+    const saltRounds = this.configService.get<number>('app.bcrypt.saltRounds')!;
+    const passwordHash = await bcrypt.hash(plainPassword, saltRounds);
+    await this.usersService.updatePassword(user.id, passwordHash);
+
+    // Revoke all existing sessions for security
+    await this.usersService.revokeAllRefreshTokensForUser(user.id);
+
+    return { message: 'Your password has been reset successfully. Please log in with your new password.' };
   }
 
   private async createAndSendVerificationOtp(user: User): Promise<void> {

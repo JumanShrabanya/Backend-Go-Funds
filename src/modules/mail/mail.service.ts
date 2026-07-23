@@ -26,4 +26,24 @@ export class MailService {
       );
     }
   }
+
+  async sendPasswordResetEmail(
+    email: string,
+    otp: string,
+    expiresInMinutes: number,
+  ): Promise<void> {
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Reset your Go Funds password',
+        text: `Your Go Funds password reset code is ${otp}. It expires in ${expiresInMinutes} minutes. If you did not request this, please ignore this email.`,
+        html: `<p>Your Go Funds password reset code is <strong>${otp}</strong>.</p><p>It expires in ${expiresInMinutes} minutes.</p><p>If you did not request a password reset, you can safely ignore this email.</p>`,
+      });
+    } catch (error) {
+      this.logger.error(`Unable to send password reset email to ${email}`, error);
+      throw new InternalServerErrorException(
+        'Unable to send the password reset email. Please try again later.',
+      );
+    }
+  }
 }
