@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { OtpVerification } from './entities/otp-verification.entity';
+import { UpdateProfileRequestDto } from './dto/request/update-profile.request.dto';
 
 @Injectable()
 export class UsersService {
@@ -72,6 +73,19 @@ export class UsersService {
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     await this.userRepository.update(userId, { passwordHash });
+  }
+
+  async updateProfile(userId: string, data: UpdateProfileRequestDto): Promise<User> {
+    const user = await this.findById(userId);
+    
+    if (data.firstName !== undefined) user.firstName = data.firstName;
+    if (data.lastName !== undefined) user.lastName = data.lastName;
+    if (data.dateOfBirth !== undefined) {
+      user.dateOfBirth = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+    }
+    if (data.annualIncome !== undefined) user.annualIncome = data.annualIncome;
+
+    return this.userRepository.save(user);
   }
 
   async deleteExpiredUnverifiedUsers(before: Date): Promise<number> {
