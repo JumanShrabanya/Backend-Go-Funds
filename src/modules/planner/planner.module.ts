@@ -6,6 +6,7 @@ import { FundsModule } from '../funds/funds.module';
 
 // Services
 import { UserValidationService } from './services/user-validation.service';
+import { PlannerStatsService } from './services/planner-stats.service';
 import { RiskAssessmentService } from './services/risk-assessment.service';
 import { GoalAnalysisService } from './services/goal-analysis.service';
 import { AssetAllocationService } from './services/asset-allocation.service';
@@ -24,6 +25,7 @@ import { RecommendationService } from './services/recommendation.service';
   controllers: [PlannerController],
   providers: [
     UserValidationService,
+    PlannerStatsService,
     RiskAssessmentService,
     GoalAnalysisService,
     AssetAllocationService,
